@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - FLAG=practice{csrf_exploit_success}
+    restart: always
+
+  checker:
+    build: ./checker
+    depends_on:
+      - web
+    environment:
+      - ATTACK_URL=http://web:5000
+  
+  evil:
+    build: ./evil_t
+    ports:
+      - "5005:5005"
+    restart: always
