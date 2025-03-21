@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Change Password</title>
+</head>
+<body>
+    <h2>Change Password</h2>
+    <form method="POST" action="/change">
+        <input type="password" name="password" placeholder="New Password" required>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit">Change</button>
+    </form>
+</body>
+</html>
