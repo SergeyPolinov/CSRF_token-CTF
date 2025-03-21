@@ -21,7 +21,9 @@ CSRF (Cross-Site Request Forgery) — это атака, при которой �
 Пример логов чекера:
 
 *Copy
+
 Checker script started
+
 Checking...
 Starting check...
 Opening login page: http://web:5000/login
