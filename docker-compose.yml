@@ -1,0 +1,46 @@
+version: '3'
+
+services:
+  app:
+    build: ./app
+    ports:
+      - "5000:5000"
+    volumes:
+      - db-data:/app/data
+    environment:
+      - FLAG=practice{csrf_is_bad}
+      - SECRET_KEY=supersecretkey
+    networks:
+      - internal
+
+  bot:
+    build: ./bot
+    depends_on:
+      - app
+      - evil
+    security_opt:
+      - seccomp:unconfined
+    shm_size: 2gb
+    networks:
+      - internal
+  
+  evil:
+    image: python:3.12-slim
+    command: python -m http.server 8000 --directory /srv/evil
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./evil:/srv/evil
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    environment:
+      - TZ=Europe/Moscow
+    networks:
+      - internal
+
+volumes:
+  db-data:
+
+networks:
+  internal:
+    driver: bridge

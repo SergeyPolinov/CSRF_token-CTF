@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html>
+<head><title>Send Flag</title></head>
+<body>
+<h1>Send Flag</h1>
+<form action="{{ url_for('send_flag') }}" method="POST">
+    Recipient: <input name="recipient"><br>
+    <input type="submit">
+</form>
+</body>
+</html>
