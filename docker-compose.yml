@@ -8,8 +8,10 @@ services:
     volumes:
       - db-data:/app/data
     environment:
-      - FLAG=practice{csrf_is_bad}
-      - SECRET_KEY=supersecretkey
+      - FLAG=${FLAG}
+      - SECRET_KEY=${SECRET_KEY}
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     networks:
       - internal
 
@@ -21,6 +23,11 @@ services:
     security_opt:
       - seccomp:unconfined
     shm_size: 2gb
+    environment:
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - APP_URL=http://app:5000
+      - ALLOWED_HOSTS=localhost,127.0.0.1
     networks:
       - internal
   
