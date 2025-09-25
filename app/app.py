@@ -149,6 +149,11 @@ def send_flag():
     if 'user_id' not in session:
         print("App: CSRF attempt - no session")
         return 'Unauthorized - No session', 403
+    
+    # Проверяем: если это прямой запрос от пользователя attacker (не CSRF от админа)
+    if session.get('username') == 'attacker' and not session.get('is_admin'):
+        print("App: Direct attempt by attacker user blocked")
+        return 'Forbidden - Attacker user cannot send flags', 403
         
     if not session.get('is_admin'):
         print("App: CSRF attempt - not admin")
@@ -193,9 +198,14 @@ def submit_to_bot():
 
 @app.route('/send_flag_form')
 def send_flag_form():
-    if 'user_id' not in session or not session.get('is_admin'):
+    if 'user_id' not in session:
         return render_template('send_flag_form.html'), 403
-    return render_template('send_flag_form.html')
+    
+    # Разрешаем доступ к форме как админу, так и пользователю attacker
+    if session.get('is_admin') or session.get('username') == 'attacker':
+        return render_template('send_flag_form.html')
+    
+    return render_template('send_flag_form.html'), 403
 
 if __name__ == '__main__':
     print("App starting...")

@@ -6,6 +6,8 @@
 <p>Welcome, {{ session.username }}</p>
 {% if session.is_admin %}
 <p>Admin panel: <a href="{{ url_for('send_flag_form') }}">Send Flag (protected form)</a></p>
+{% elif session.username == 'attacker' %}
+<p>Special panel: <a href="{{ url_for('send_flag_form') }}">Send Flag (will fail)</a></p>
 {% endif %}
 <a href="{{ url_for('inbox') }}">Inbox</a> | <a href="{{ url_for('logout') }}">Logout</a>
 </body>
