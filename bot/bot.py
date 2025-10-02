@@ -12,25 +12,42 @@ app = Flask(__name__)
 APP_URL = os.environ.get('APP_URL', 'http://localhost:5000')
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
+def is_private_ip(ip):
+    parts = ip.split('.')
+    if len(parts) != 4:
+        return False
+    
+    try:
+        first = int(parts[0])
+        second = int(parts[1])
+        # 10.0.0.0-10.255.255.255
+        if first == 10:
+            return True
+        # 100.64.0.0-100.172.255.255
+        if first == 100 and 64 <= second == 127:
+            return True
+        # 172.16.0.0-172.31.255.255
+        if first == 172 and 16 <= second <= 31:
+            return True
+        # 192.168.0.0-192.168.255.255
+        if first == 192 and second == 168:
+            return True
+        return False
+
+    except ValueError:
+        return False
+
 def is_safe_url(url):
     try:
         parsed_url = urlparse(url)
         host = parsed_url.hostname
+        port = parsed_url.port
         
         if not host:
             print(f"SSRF Protection: No hostname in URL: {url}")
             return False, "Invalid URL - no hostname"
         
         print(f"SSRF Protection: Checking host: {host}")
-
-        if host in ALLOWED_HOSTS:
-            print(f"SSRF Protection: Host {host} is in allowed hosts list")
-            return True, "Allowed host"
-
-        app_host = urlparse(APP_URL).hostname
-        if host == app_host:
-            print(f"SSRF Protection: Host {host} is app host")
-            return True, "App host"
 
         try:
             ip = socket.gethostbyname(host)
@@ -39,12 +56,22 @@ def is_safe_url(url):
             print(f"SSRF Protection: Cannot resolve host {host}: {str(e)}")
             return False, f"Cannot resolve host: {host}"
 
-        if ip == '127.0.0.1' or ip.startswith('127.'):
-            print(f"SSRF Protection: IP {ip} is localhost - ALLOWED")
-            return True, "Localhost IP"
+        if is_private_ip(ip):
+            print(f"SSRF Protection: IP {ip} is private - BLOCKED")
+            return False, "Private IP addresses are not allowed"
+        
+        if host in ['localhost', '127.0.0.1', urlparse(APP_URL).hostname] or host.startswith('127.'):
+            print(f"SSRF Protection: Host {host} matches application host")
+            app_port = 8000
+            if port == app_port:
+                print(f"SSRF Protection: Port {port} matches application port")
+                return True, "Good host and port"
+            else:
+                print(f"SSRF Protection: Port {port} not allowed for localhost/127.x (only {app_port} allowed)")
+                return False, f"Port {port} is not allowed for localhost addresses"
 
-        print(f"SSRF Protection: IP {ip} is not allowed")
-        return False, "Public IP addresses are not allowed"
+        print(f"SSRF Protection: IP {ip} is public - ALLOWED")
+        return True, "Public IP address"
         
     except Exception as e:
         print(f"SSRF Protection: Error checking URL {url}: {str(e)}")
@@ -85,8 +112,9 @@ def visit_url(url):
             return
     
     try:
-        print(f"Bot: Logging in as admin to {APP_URL}/login...")
-        driver.get(APP_URL + '/login')
+        login_url = f'{APP_URL}/login'
+        print(f"Bot: Logging in as admin to {login_url}...")
+        driver.get(login_url)
 
         print(f"Bot: Current page title: {driver.title}")
         print(f"Bot: Current URL: {driver.current_url}")

@@ -12,14 +12,18 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - BOT_URL=http://bot:5001
     networks:
       - internal
+    depends_on:
+      - bot
 
   bot:
     build: ./bot
     depends_on:
-      - app
       - evil
+    ports:
+      - "5001:5001"
     security_opt:
       - seccomp:unconfined
     shm_size: 2gb
@@ -27,7 +31,7 @@ services:
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - APP_URL=http://app:5000
-      - ALLOWED_HOSTS=localhost,127.0.0.1
+      - ALLOWED_HOSTS=localhost,127.0.0.1,app,evil
     networks:
       - internal
   

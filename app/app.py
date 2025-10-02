@@ -7,6 +7,7 @@ app = Flask(__name__)
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'supersecretkey')
 FLAG = os.environ.get('FLAG', 'practice{default_flag}')
+BOT_URL = os.environ.get('BOT_URL', 'http://127.0.0.1:5001')
 
 if SECRET_KEY == 'supersecretkey':
     print("WARNING: Using default SECRET_KEY. Set SECRET_KEY environment variable for production!")
@@ -153,10 +154,6 @@ def send_flag():
     if not session.get('is_admin'):
         print("App: Direct attempt non-admin user blocked")
         return 'Forbidden - non-admin user cannot send flags', 403
-        
-    if not session.get('is_admin'):
-        print("App: CSRF attempt - not admin")
-        return 'Unauthorized - Not admin', 403
     
     recipient = request.form.get('recipient')
     if not recipient:
@@ -181,9 +178,10 @@ def submit_to_bot():
     if request.method == 'POST':
         url = request.form['url']
         print(f"App: Submitting URL to bot: {url}")
+        print(f"App: Bot URL configured as: {BOT_URL}")
         import requests
         try:
-            response = requests.post('http://bot:5001/visit', json={'url': url}, timeout=60)
+            response = requests.post(f'{BOT_URL}/visit', json={'url': url}, timeout=60)
             print(f"App: Bot response: {response.status_code} - {response.text}")
             if response.status_code == 200:
                 flash('URL submitted to bot successfully')
@@ -204,5 +202,6 @@ def send_flag_form():
 if __name__ == '__main__':
     print("App starting...")
     print(f"Flag: {FLAG}")
+    print(f"Bot URL: {BOT_URL}")
     init_db()
     app.run(host='0.0.0.0', port=5000, debug=True)
