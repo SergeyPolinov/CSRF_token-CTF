@@ -55,7 +55,6 @@ def is_safe_url(url):
             print(f"SSRF Protection: Cannot resolve host {host}: {str(e)}")
             return False, f"Cannot resolve host: {host}"
 
-        # Блокируем приватные IP-адреса
         if is_private_ip(ip):
             print(f"SSRF Protection: IP {ip} is private - BLOCKED")
             return False, "Private IP addresses are not allowed"
@@ -75,10 +74,8 @@ def check_page_for_localhost_forms(driver):
             action = form.get_attribute('action')
             if action:
                 print(f"Bot: Found form with action: {action}")
-                # Проверяем на localhost и 127.0.0.1
                 action_lower = action.lower()
-                
-                # Проверяем различные варианты localhost
+
                 localhost_patterns = [
                     'localhost',
                     '127.0.0.1',
@@ -98,7 +95,6 @@ def check_page_for_localhost_forms(driver):
         return True, "No localhost forms found"
     except Exception as e:
         print(f"Bot: Error checking forms: {str(e)}")
-        # В случае ошибки проверки - считаем страницу безопасной
         return True, "Could not check forms"
 
 def visit_url(url):
@@ -168,7 +164,6 @@ def visit_url(url):
         
         print(f"Bot: Visiting target URL: {url}")
         
-        # Отключаем JavaScript ПЕРЕД загрузкой страницы
         driver.execute_cdp_cmd('Emulation.setScriptExecutionDisabled', {'value': True})
         print("Bot: JavaScript execution disabled for security check")
         
@@ -176,28 +171,23 @@ def visit_url(url):
 
         print("Bot: Waiting for page to load (JS disabled)...")
         time.sleep(0.3)
-        
-        # Проверяем страницу на наличие форм с localhost ПЕРЕД выполнением JavaScript
+
         print("Bot: Checking page for localhost forms...")
         is_safe, reason = check_page_for_localhost_forms(driver)
         
         if not is_safe:
             print(f"Bot: Security check FAILED: {reason}")
-            # Важно: закрываем драйвер и возвращаем ошибку
             driver.quit()
             print("Bot: Driver closed due to security violation")
             return reason
         
         print("Bot: Page passed security check")
         
-        # Включаем JavaScript обратно и перезагружаем страницу
         driver.execute_cdp_cmd('Emulation.setScriptExecutionDisabled', {'value': False})
         print("Bot: JavaScript execution enabled")
         
-        # Перезагружаем страницу для выполнения JavaScript
         driver.refresh()
         
-        # ВАЖНО: Даем время на выполнение JavaScript и отправку формы
         print("Bot: Waiting for JavaScript execution and form submission...")
         time.sleep(2)
         
