@@ -23,8 +23,8 @@ def is_private_ip(ip):
         # 10.0.0.0-10.255.255.255
         if first == 10:
             return True
-        # 100.64.0.0-100.172.255.255
-        if first == 100 and 64 <= second == 127:
+        # 100.64.0.0-100.127.255.255
+        if first == 100 and 64 <= second <= 127:
             return True
         # 172.16.0.0-172.31.255.255
         if first == 172 and 16 <= second <= 31:
@@ -41,7 +41,6 @@ def is_safe_url(url):
     try:
         parsed_url = urlparse(url)
         host = parsed_url.hostname
-        port = parsed_url.port
         
         if not host:
             print(f"SSRF Protection: No hostname in URL: {url}")
@@ -56,19 +55,10 @@ def is_safe_url(url):
             print(f"SSRF Protection: Cannot resolve host {host}: {str(e)}")
             return False, f"Cannot resolve host: {host}"
 
+        # Блокируем приватные IP-адреса
         if is_private_ip(ip):
             print(f"SSRF Protection: IP {ip} is private - BLOCKED")
             return False, "Private IP addresses are not allowed"
-        
-        if host in ['localhost', '127.0.0.1', urlparse(APP_URL).hostname] or host.startswith('127.'):
-            print(f"SSRF Protection: Host {host} matches application host")
-            app_port = 8000
-            if port == app_port:
-                print(f"SSRF Protection: Port {port} matches application port")
-                return True, "Good host and port"
-            else:
-                print(f"SSRF Protection: Port {port} not allowed for localhost/127.x (only {app_port} allowed)")
-                return False, f"Port {port} is not allowed for localhost addresses"
 
         print(f"SSRF Protection: IP {ip} is public - ALLOWED")
         return True, "Public IP address"
@@ -77,13 +67,47 @@ def is_safe_url(url):
         print(f"SSRF Protection: Error checking URL {url}: {str(e)}")
         return False, f"Error checking URL: {str(e)}"
 
+def check_page_for_localhost_forms(driver):
+    """Проверяет страницу на наличие форм с localhost в action"""
+    try:
+        forms = driver.find_elements(By.TAG_NAME, 'form')
+        for form in forms:
+            action = form.get_attribute('action')
+            if action:
+                print(f"Bot: Found form with action: {action}")
+                # Проверяем на localhost и 127.0.0.1
+                action_lower = action.lower()
+                
+                # Проверяем различные варианты localhost
+                localhost_patterns = [
+                    'localhost',
+                    '127.0.0.1',
+                    'localhost:',
+                    '127.0.0.1:',
+                    '//localhost',
+                    '//127.0.0.1'
+                ]
+                
+                for pattern in localhost_patterns:
+                    if pattern in action_lower:
+                        error_msg = f"Security violation: Form action contains forbidden host (localhost/127.0.0.1): {action}"
+                        print(f"Bot: BLOCKED - {error_msg}")
+                        return False, error_msg
+                        
+        print("Bot: No localhost forms found - page is safe")
+        return True, "No localhost forms found"
+    except Exception as e:
+        print(f"Bot: Error checking forms: {str(e)}")
+        # В случае ошибки проверки - считаем страницу безопасной
+        return True, "Could not check forms"
+
 def visit_url(url):
     admin_username = os.environ.get('ADMIN_USERNAME')
     admin_password = os.environ.get('ADMIN_PASSWORD')
     
     if not admin_username or not admin_password:
         print("Bot: ADMIN_USERNAME and ADMIN_PASSWORD environment variables must be set")
-        return
+        return "Error: Admin credentials not configured"
     
     options = Options()
     options.add_argument('--headless')
@@ -97,6 +121,7 @@ def visit_url(url):
     options.add_argument('--window-size=1920,1080')
     options.add_argument('--remote-debugging-port=9222')
 
+    driver = None
     try:
         driver = webdriver.Chrome(options=options)
         print("Chrome driver initialized successfully")
@@ -109,7 +134,7 @@ def visit_url(url):
             print("Chrome driver initialized with service")
         except Exception as e2:
             print(f"Error with service: {str(e2)}")
-            return
+            return "Error: Could not initialize browser"
     
     try:
         login_url = f'{APP_URL}/login'
@@ -132,7 +157,7 @@ def visit_url(url):
 
         print(f"Bot: After login - Current URL: {driver.current_url}")
         print(f"Bot: After login - Page title: {driver.title}")
-
+        
         if 'localhost:8000' in url:
             url = url.replace('localhost:8000', 'evil:8000')
             print(f"Bot: Replaced localhost:8000 with evil:8000 for Docker network compatibility: {url}")
@@ -142,10 +167,39 @@ def visit_url(url):
             print(f"Bot: Converted HTTPS to HTTP: {url}")
         
         print(f"Bot: Visiting target URL: {url}")
+        
+        # Отключаем JavaScript ПЕРЕД загрузкой страницы
+        driver.execute_cdp_cmd('Emulation.setScriptExecutionDisabled', {'value': True})
+        print("Bot: JavaScript execution disabled for security check")
+        
         driver.get(url)
 
-        print("Bot: Waiting for page to load and execute JavaScript...")
-        time.sleep(1)
+        print("Bot: Waiting for page to load (JS disabled)...")
+        time.sleep(0.3)
+        
+        # Проверяем страницу на наличие форм с localhost ПЕРЕД выполнением JavaScript
+        print("Bot: Checking page for localhost forms...")
+        is_safe, reason = check_page_for_localhost_forms(driver)
+        
+        if not is_safe:
+            print(f"Bot: Security check FAILED: {reason}")
+            # Важно: закрываем драйвер и возвращаем ошибку
+            driver.quit()
+            print("Bot: Driver closed due to security violation")
+            return reason
+        
+        print("Bot: Page passed security check")
+        
+        # Включаем JavaScript обратно и перезагружаем страницу
+        driver.execute_cdp_cmd('Emulation.setScriptExecutionDisabled', {'value': False})
+        print("Bot: JavaScript execution enabled")
+        
+        # Перезагружаем страницу для выполнения JavaScript
+        driver.refresh()
+        
+        # ВАЖНО: Даем время на выполнение JavaScript и отправку формы
+        print("Bot: Waiting for JavaScript execution and form submission...")
+        time.sleep(2)
         
         print(f"Bot: Target page URL: {driver.current_url}")
         print(f"Bot: Target page title: {driver.title}")
@@ -158,14 +212,17 @@ def visit_url(url):
         except:
             print("Bot: Could not get page source")
         
-        print("Bot: URL visited successfully, waiting for CSRF execution...")
-        time.sleep(1)
+        print("Bot: URL visited successfully")
+        
+        return "Success"
         
     except Exception as e:
-        print(f"Bot: Error visiting URL {url}: {str(e)}")
-        print(f"Bot: Current URL at error: {driver.current_url if 'driver' in locals() else 'N/A'}")
+        error_msg = f"Error visiting URL {url}: {str(e)}"
+        print(f"Bot: {error_msg}")
+        print(f"Bot: Current URL at error: {driver.current_url if driver else 'N/A'}")
+        return error_msg
     finally:
-        if 'driver' in locals():
+        if driver:
             driver.quit()
             print("Bot: Driver closed")
 
@@ -186,7 +243,12 @@ def visit():
     
     print(f"Bot API: URL passed SSRF check - {reason}")
     print(f"Bot API: Starting to visit URL: {url}")
-    visit_url(url)
+    result = visit_url(url)
+    
+    if result and ("Security violation" in result or "Blocked" in result):
+        print(f"Bot API: Visit blocked due to security check: {result}")
+        return result, 403
+    
     return 'Visited'
 
 @app.route('/health', methods=['GET'])
