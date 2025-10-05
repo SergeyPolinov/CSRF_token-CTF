@@ -87,7 +87,7 @@ def check_page_for_localhost_forms(driver):
                 
                 for pattern in localhost_patterns:
                     if pattern in action_lower:
-                        error_msg = f"Security violation: Form action contains forbidden host (localhost/127.0.0.1): {action}"
+                        error_msg = f"Security violation: Form action contains forbidden host (localhost/127.0.0.1): {action}, must be app"
                         print(f"Bot: BLOCKED - {error_msg}")
                         return False, error_msg
                         
